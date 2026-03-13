@@ -1,36 +1,39 @@
-import React, { useState, useRef } from 'react';
-import { useTransactions, useCategories, useUpdateCategory, useImportCsv, useAccounts, Transaction } from '../services/api/hooks';
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useTransactions, useCreateTransaction, useDeleteTransaction, useAccounts } from '../services/api/hooks';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { Badge } from '../components/ui/Badge';
 import { Skeleton } from '../components/ui/Skeleton';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import styles from './Transactions.module.css';
 
-function formatCurrency(n: number) {
+function fmt(n: number) {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n);
 }
 
+const CATEGORIES = ['Alimentation', 'Transport', 'Logement', 'Santé', 'Loisirs', 'Éducation', 'Vêtements', 'Voyages', 'Shopping', 'Restaurants', 'Sport', 'Abonnements', 'Salaire', 'Investissements', 'Autre'];
+
+interface TxForm { accountId: string; amount: number; type: 'INCOME' | 'EXPENSE'; category: string; description: string; date: string; }
+
 export default function Transactions() {
-  const [showImport, setShowImport] = useState(false);
-  const [editTxId, setEditTxId] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useTransactions();
-  const { data: categories } = useCategories();
+  const [showModal, setShowModal] = useState(false);
+  const [page, setPage] = useState(1);
+  const { data, isLoading } = useTransactions({ page: String(page), limit: '20' });
   const { data: accountsData } = useAccounts();
-  const { mutate: updateCat } = useUpdateCategory();
-  const { mutate: importCsv, isPending: importing } = useImportCsv();
-  const hasAccounts = (accountsData?.accounts?.length ?? 0) > 0;
+  const { mutate: create, isPending } = useCreateTransaction();
+  const { mutate: del } = useDeleteTransaction();
 
-  const allTransactions = data?.pages.flatMap((p) => (p as unknown as { transactions: Transaction[] }).transactions) ?? [];
+  const { register, handleSubmit, reset } = useForm<TxForm>({
+    defaultValues: { type: 'EXPENSE', category: 'Alimentation', date: new Date().toISOString().split('T')[0] },
+  });
 
-  const handleImport = () => {
-    const file = fileRef.current?.files?.[0];
-    if (!file) return;
-    importCsv(file, { onSuccess: () => setShowImport(false) });
+  const onSubmit = (d: TxForm) => {
+    create(
+      { ...d, amount: Number(d.amount), date: new Date(d.date).toISOString(), accountId: d.accountId || undefined },
+      { onSuccess: () => { setShowModal(false); reset(); } }
+    );
   };
 
   return (
@@ -38,9 +41,9 @@ export default function Transactions() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Transactions</h1>
-          <p className={styles.subtitle}>{allTransactions.length} transaction(s)</p>
+          <p className={styles.subtitle}>{data?.total ?? 0} transaction(s)</p>
         </div>
-        <Button variant="outline" leftIcon="📂" onClick={() => setShowImport(true)}>Import CSV</Button>
+        <Button leftIcon="+" onClick={() => setShowModal(true)}>Nouvelle transaction</Button>
       </div>
 
       <Card padding="sm">
@@ -49,90 +52,83 @@ export default function Transactions() {
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Libellé</th>
+                <th>Description</th>
                 <th>Catégorie</th>
                 <th>Compte</th>
                 <th>Montant</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {isLoading
                 ? Array.from({ length: 10 }).map((_, i) => (
-                    <tr key={i}>
-                      <td colSpan={5}><Skeleton variant="text" lines={1} /></td>
-                    </tr>
+                    <tr key={i}><td colSpan={6}><Skeleton variant="text" lines={1} /></td></tr>
                   ))
-                : allTransactions.map((tx) => (
+                : (data?.transactions ?? []).map((tx) => (
                     <tr key={tx.id} className={styles.row}>
-                      <td className={styles.date}>
-                        {format(new Date(tx.date), 'd MMM yy', { locale: fr })}
-                      </td>
-                      <td className={styles.label}>
-                        <span>{tx.label}</span>
-                        {tx.isRecurring && <span className={styles.recurringBadge}>🔄</span>}
+                      <td className={styles.date}>{format(new Date(tx.date), 'd MMM yy', { locale: fr })}</td>
+                      <td className={styles.label}>{tx.description || '—'}</td>
+                      <td><span className={styles.categoryBadge}>{tx.category}</span></td>
+                      <td className={styles.account}>{tx.account?.name ?? '—'}</td>
+                      <td className={`${styles.amount} ${tx.type === 'INCOME' ? styles.positive : styles.negative}`}>
+                        {tx.type === 'INCOME' ? '+' : '-'}{fmt(tx.amount)}
                       </td>
                       <td>
-                        {tx.category ? (
-                          <Badge label={tx.category.name} color={tx.category.color} emoji={tx.category.emoji} />
-                        ) : (
-                          <button className={styles.categorizeBtn} onClick={() => setEditTxId(tx.id)}>
-                            Catégoriser
-                          </button>
-                        )}
-                      </td>
-                      <td className={styles.account}>{tx.account?.label}</td>
-                      <td className={`${styles.amount} ${tx.amount > 0 ? styles.positive : styles.negative}`}>
-                        {tx.amount > 0 ? '+' : ''}{formatCurrency(tx.amount)}
+                        <button className={styles.deleteBtn} onClick={() => del(tx.id)}>🗑️</button>
                       </td>
                     </tr>
                   ))}
             </tbody>
           </table>
         </div>
-
-        {hasNextPage && (
-          <div className={styles.loadMore}>
-            <Button variant="ghost" onClick={() => fetchNextPage()} loading={isFetchingNextPage}>
-              Charger plus
-            </Button>
+        {data && data.totalPages > 1 && (
+          <div className={styles.pagination}>
+            <Button variant="ghost" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>← Préc.</Button>
+            <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{page} / {data.totalPages}</span>
+            <Button variant="ghost" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= data.totalPages}>Suiv. →</Button>
           </div>
         )}
       </Card>
 
-      {/* Categorize Modal */}
-      <Modal isOpen={!!editTxId} onClose={() => setEditTxId(null)} title="Choisir une catégorie" size="sm">
-        <div className={styles.catGrid}>
-          {categories?.map((c) => (
-            <button
-              key={c.id}
-              className={styles.catItem}
-              onClick={() => { updateCat({ id: editTxId!, categoryId: c.id }); setEditTxId(null); }}
-            >
-              <span style={{ fontSize: '1.5rem' }}>{c.emoji}</span>
-              <span>{c.name}</span>
-            </button>
-          ))}
-        </div>
-      </Modal>
-
-      {/* Import Modal */}
-      <Modal isOpen={showImport} onClose={() => setShowImport(false)} title="Importer CSV / Excel" size="sm">
-        <div className={styles.importArea}>
-          {!hasAccounts && (
-            <div style={{ background: 'rgba(255,45,120,0.1)', border: '1px solid rgba(255,45,120,0.4)', borderRadius: '8px', padding: '12px', marginBlockEnd: '16px', color: 'var(--color-text)', fontSize: '0.875rem' }}>
-              ⚠️ Vous devez d'abord créer un <strong>compte bancaire</strong> (onglet "Comptes") avant d'importer.
-            </div>
-          )}
-          <div className={styles.importIcon}>📂</div>
-          <p className={styles.importDesc}>
-            Formats supportés : <code>.csv</code> et <code>.xlsx</code> (Excel)<br />
-            Colonnes requises : <code>date</code>, <code>label</code> (ou libellé), <code>amount</code> (ou montant)
-          </p>
-          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className={styles.fileInput} disabled={!hasAccounts} />
-          <Button onClick={handleImport} loading={importing} fullWidth size="lg" disabled={!hasAccounts}>
-            Importer
-          </Button>
-        </div>
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Nouvelle transaction" size="sm">
+        <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
+          <div className={styles.formGroup}>
+            <label>Type</label>
+            <select {...register('type')}>
+              <option value="EXPENSE">💸 Dépense</option>
+              <option value="INCOME">💰 Revenu</option>
+            </select>
+          </div>
+          <div className={styles.formGroup}>
+            <label>Montant (€)</label>
+            <input type="number" step="0.01" min="0.01" placeholder="0.00" {...register('amount', { required: true, min: 0.01 })} />
+          </div>
+          <div className={styles.formGroup}>
+            <label>Catégorie</label>
+            <select {...register('category')}>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div className={styles.formGroup}>
+            <label>Description (optionnel)</label>
+            <input placeholder="Courses Monoprix..." {...register('description')} />
+          </div>
+          <div className={styles.formGroup}>
+            <label>Date</label>
+            <input type="date" {...register('date', { required: true })} />
+          </div>
+          <div className={styles.formGroup}>
+            <label>Compte (optionnel)</label>
+            <select {...register('accountId')}>
+              <option value="">— Aucun —</option>
+              {(accountsData?.accounts ?? []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </div>
+          <div className={styles.formActions}>
+            <Button type="button" variant="outline" onClick={() => setShowModal(false)}>Annuler</Button>
+            <Button type="submit" loading={isPending}>Ajouter</Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

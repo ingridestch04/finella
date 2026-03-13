@@ -1,79 +1,64 @@
 import React from 'react';
-import { useTransactionStats, useAccounts, useNotifications, useTransactions, Transaction } from '../services/api/hooks';
+import { useTransactionStats, useAccounts, useTransactions } from '../services/api/hooks';
 import { Card } from '../components/ui/Card';
 import { Skeleton } from '../components/ui/Skeleton';
-import { Badge } from '../components/ui/Badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-} from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import styles from './Dashboard.module.css';
 
-function formatCurrency(amount: number, currency = 'EUR'): string {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(amount);
+function fmt(n: number) {
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n);
 }
 
-const KPI_COLORS = {
-  income: 'var(--color-success)',
-  expenses: 'var(--color-danger)',
-  balance: 'var(--color-neon-violet)',
-  total: 'var(--color-hot-pink)',
-};
+const COLORS = ['#c026d3', '#7c3aed', '#2563eb', '#0891b2', '#059669', '#d97706', '#dc2626', '#be123c'];
 
 export default function Dashboard() {
-  const { data: stats, isLoading: statsLoading } = useTransactionStats('month');
+  const now = new Date();
+  const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+  const { data: stats, isLoading: statsLoading } = useTransactionStats(startDate, endDate);
   const { data: accountsData, isLoading: accountsLoading } = useAccounts();
-  const { data: notifData } = useNotifications();
   const { data: txData, isLoading: txLoading } = useTransactions({ limit: '5' });
 
-  const recentTx = (txData?.pages?.[0] as unknown as { transactions: Transaction[] } | undefined)?.transactions ?? [];
-
-  const pieData = (stats?.spendingByCategory ?? []).map((item) => ({
-    name: item.category ? `${item.category.emoji} ${item.category.name}` : 'Autre',
-    value: item.total,
-    color: item.category?.color ?? '#6b7280',
-  }));
+  const pieData = Object.entries(stats?.byCategory ?? {})
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8);
 
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
         <h1 className={styles.title}>Tableau de bord</h1>
-        <p className={styles.subtitle}>{format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}</p>
+        <p className={styles.subtitle}>{format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}</p>
       </div>
 
       {/* KPI Cards */}
       <div className={styles.kpiGrid}>
-        {statsLoading ? (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} variant="card" height={120} />)
-        ) : (
+        {statsLoading ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} variant="card" height={120} />) : (
           <>
             <Card glow="violet" className={styles.kpiCard}>
               <div className={styles.kpiLabel}>Revenus du mois</div>
-              <div className={styles.kpiValue} style={{ color: KPI_COLORS.income }}>
-                {formatCurrency(stats?.income ?? 0)}
-              </div>
+              <div className={styles.kpiValue} style={{ color: 'var(--color-success)' }}>{fmt(stats?.income ?? 0)}</div>
               <div className={styles.kpiIcon}>💰</div>
             </Card>
             <Card className={styles.kpiCard}>
               <div className={styles.kpiLabel}>Dépenses du mois</div>
-              <div className={styles.kpiValue} style={{ color: KPI_COLORS.expenses }}>
-                {formatCurrency(stats?.expenses ?? 0)}
-              </div>
+              <div className={styles.kpiValue} style={{ color: 'var(--color-danger)' }}>{fmt(stats?.expenses ?? 0)}</div>
               <div className={styles.kpiIcon}>💸</div>
             </Card>
             <Card className={styles.kpiCard}>
               <div className={styles.kpiLabel}>Solde net</div>
-              <div className={styles.kpiValue} style={{ color: (stats?.balance ?? 0) >= 0 ? KPI_COLORS.balance : KPI_COLORS.expenses }}>
-                {formatCurrency(stats?.balance ?? 0)}
+              <div className={styles.kpiValue} style={{ color: (stats?.balance ?? 0) >= 0 ? 'var(--color-neon-violet)' : 'var(--color-danger)' }}>
+                {fmt(stats?.balance ?? 0)}
               </div>
               <div className={styles.kpiIcon}>📈</div>
             </Card>
             <Card glow="pink" className={styles.kpiCard}>
               <div className={styles.kpiLabel}>Total comptes</div>
-              <div className={styles.kpiValue} style={{ color: KPI_COLORS.total }}>
-                {accountsLoading ? '...' : formatCurrency(accountsData?.total ?? 0)}
+              <div className={styles.kpiValue} style={{ color: 'var(--color-hot-pink)' }}>
+                {accountsLoading ? '...' : fmt(accountsData?.totalBalance ?? 0)}
               </div>
               <div className={styles.kpiIcon}>🏦</div>
             </Card>
@@ -82,21 +67,25 @@ export default function Dashboard() {
       </div>
 
       <div className={styles.chartsRow}>
-        {/* Spending Donut */}
+        {/* Spending by Category */}
         <Card className={styles.donutCard} padding="lg">
           <h2 className={styles.cardTitle}>Dépenses par catégorie</h2>
           {statsLoading ? <Skeleton variant="chart" height={220} /> : (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={3} dataKey="value">
-                  {pieData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} stroke="transparent" />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 8 }} />
-                <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>{v}</span>} />
-              </PieChart>
-            </ResponsiveContainer>
+            pieData.length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 220, color: 'var(--color-text-muted)' }}>
+                Aucune dépense ce mois
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={3} dataKey="value">
+                    {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />)}
+                  </Pie>
+                  <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 8 }} />
+                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>{v}</span>} />
+                </PieChart>
+              </ResponsiveContainer>
+            )
           )}
         </Card>
 
@@ -109,20 +98,23 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className={styles.txList}>
-              {recentTx.map((tx) => (
+              {(txData?.transactions ?? []).map((tx) => (
                 <div key={tx.id} className={styles.txItem}>
                   <div className={styles.txLeft}>
-                    <span className={styles.txEmoji}>{tx.category?.emoji ?? '💳'}</span>
+                    <span className={styles.txEmoji}>💳</span>
                     <div>
-                      <div className={styles.txLabel}>{tx.label}</div>
+                      <div className={styles.txLabel}>{tx.description || tx.category}</div>
                       <div className={styles.txDate}>{format(new Date(tx.date), 'd MMM', { locale: fr })}</div>
                     </div>
                   </div>
-                  <div className={styles.txAmount} style={{ color: tx.amount > 0 ? 'var(--color-success)' : 'var(--color-text)' }}>
-                    {tx.amount > 0 ? '+' : ''}{formatCurrency(tx.amount)}
+                  <div className={styles.txAmount} style={{ color: tx.type === 'INCOME' ? 'var(--color-success)' : 'var(--color-text)' }}>
+                    {tx.type === 'INCOME' ? '+' : '-'}{fmt(tx.amount)}
                   </div>
                 </div>
               ))}
+              {(txData?.transactions ?? []).length === 0 && (
+                <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '20px' }}>Aucune transaction</p>
+              )}
             </div>
           )}
         </Card>
@@ -133,16 +125,19 @@ export default function Dashboard() {
         <h2 className={styles.cardTitle}>Mes comptes</h2>
         {accountsLoading ? <Skeleton variant="card" height={80} /> : (
           <div className={styles.accountsGrid}>
-            {accountsData?.accounts.map((acc) => (
+            {(accountsData?.accounts ?? []).map((acc) => (
               <div key={acc.id} className={styles.accountItem}>
                 <div className={styles.accountIcon}>🏦</div>
                 <div className={styles.accountInfo}>
-                  <div className={styles.accountLabel}>{acc.label}</div>
-                  <div className={styles.accountProvider}>{acc.provider}</div>
+                  <div className={styles.accountLabel}>{acc.name}</div>
+                  <div className={styles.accountProvider}>{acc.type}</div>
                 </div>
-                <div className={styles.accountBalance}>{formatCurrency(acc.balance, acc.currency)}</div>
+                <div className={styles.accountBalance}>{fmt(acc.balance)}</div>
               </div>
             ))}
+            {(accountsData?.accounts ?? []).length === 0 && (
+              <p style={{ color: 'var(--color-text-muted)' }}>Aucun compte. Ajoutez-en un dans "Comptes".</p>
+            )}
           </div>
         )}
       </Card>

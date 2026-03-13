@@ -10,16 +10,9 @@ import Transactions from './pages/Transactions';
 import Budgets from './pages/Budgets';
 import Goals from './pages/Goals';
 import Accounts from './pages/Accounts';
-import Settings from './pages/Settings';
-import Analytics from './pages/Analytics';
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 2 * 60 * 1000,
-      retry: 1,
-    },
-  },
+  defaultOptions: { queries: { staleTime: 2 * 60 * 1000, retry: 1 } },
 });
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -48,8 +41,6 @@ export default function App() {
             <Route path="budgets" element={<Budgets />} />
             <Route path="goals" element={<Goals />} />
             <Route path="accounts" element={<Accounts />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="analytics" element={<Analytics />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

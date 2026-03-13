@@ -1,65 +1,75 @@
-import { Router, Response, NextFunction } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
+import { prisma } from '../config/db';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { validateBody, validateParams } from '../middleware/validate';
-import { prisma } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 
 const router = Router();
 router.use(authenticate);
-const idParam = z.object({ id: z.string() });
 
-router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+const schema = z.object({
+  name: z.string().min(1),
+  type: z.enum(['SAVINGS', 'DEBT', 'PURCHASE', 'RETIREMENT']),
+  targetAmount: z.number().positive(),
+  currentAmount: z.number().default(0),
+  targetDate: z.string().optional(),
+});
+
+function withProgress(g: { id: string; name: string; type: string; targetAmount: number; currentAmount: number; targetDate: Date | null; createdAt: Date; updatedAt: Date; userId: string }) {
+  const pct = g.targetAmount > 0 ? (g.currentAmount / g.targetAmount) * 100 : 0;
+  const daysLeft = g.targetDate
+    ? Math.max(0, Math.ceil((g.targetDate.getTime() - Date.now()) / 86400000))
+    : null;
+  return { ...g, percentage: Math.min(Math.round(pct), 100), remaining: Math.max(g.targetAmount - g.currentAmount, 0), daysLeft };
+}
+
+router.get('/', async (req: AuthRequest, res: Response, next) => {
   try {
-    const goals = await prisma.goal.findMany({ where: { userId: req.userId!, status: { in: ['ACTIVE','PAUSED'] } }, include: { contributions: { orderBy: { date: 'desc' }, take: 5 } } });
-    const result = goals.map((g) => {
-      const target = Number(g.targetAmount), current = Number(g.currentAmount);
-      const pct = target > 0 ? (current / target) * 100 : 0;
-      const days = g.endDate ? Math.max(0, Math.ceil((g.endDate.getTime() - Date.now()) / 86400_000)) : null;
-      return { ...g, percentage: Math.min(pct, 100), daysRemaining: days, remaining: Math.max(target - current, 0) };
+    const goals = await prisma.goal.findMany({ where: { userId: req.userId! }, orderBy: { createdAt: 'desc' } });
+    res.json(goals.map(withProgress));
+  } catch (err) { next(err); }
+});
+
+router.post('/', async (req: AuthRequest, res: Response, next) => {
+  try {
+    const data = schema.parse(req.body);
+    const goal = await prisma.goal.create({
+      data: { ...data, targetDate: data.targetDate ? new Date(data.targetDate) : null, userId: req.userId! },
     });
-    res.json(result);
-  } catch (e) { next(e); }
+    res.status(201).json(withProgress(goal));
+  } catch (err) { next(err); }
 });
 
-router.post('/', validateBody(z.object({
-  name: z.string().min(1).max(100), type: z.enum(['SAVINGS','DEBT_PAYOFF','INVESTMENT','EMERGENCY_FUND','PURCHASE']),
-  targetAmount: z.number().positive(), startDate: z.string().transform((s) => new Date(s)),
-  endDate: z.string().transform((s) => new Date(s)).optional(), icon: z.string().default('🎯'),
-})), async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try { res.status(201).json(await prisma.goal.create({ data: { ...req.body, userId: req.userId! } })); }
-  catch (e) { next(e); }
-});
-
-router.put('/:id', validateParams(idParam), async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put('/:id', async (req: AuthRequest, res: Response, next) => {
   try {
-    if (!await prisma.goal.findFirst({ where: { id: req.params.id, userId: req.userId! } })) throw new AppError(404, 'Goal not found');
-    res.json(await prisma.goal.update({ where: { id: req.params.id }, data: req.body }));
-  } catch (e) { next(e); }
+    const data = schema.partial().parse(req.body);
+    const existing = await prisma.goal.findFirst({ where: { id: req.params.id, userId: req.userId! } });
+    if (!existing) throw new AppError(404, 'Objectif non trouvé');
+    const updated = await prisma.goal.update({
+      where: { id: req.params.id },
+      data: { ...data, ...(data.targetDate ? { targetDate: new Date(data.targetDate) } : {}) },
+    });
+    res.json(withProgress(updated));
+  } catch (err) { next(err); }
 });
 
-router.delete('/:id', validateParams(idParam), async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.delete('/:id', async (req: AuthRequest, res: Response, next) => {
   try {
-    if (!await prisma.goal.findFirst({ where: { id: req.params.id, userId: req.userId! } })) throw new AppError(404, 'Goal not found');
-    await prisma.goal.update({ where: { id: req.params.id }, data: { status: 'CANCELLED' } });
-    res.json({ message: 'Goal cancelled' });
-  } catch (e) { next(e); }
+    const existing = await prisma.goal.findFirst({ where: { id: req.params.id, userId: req.userId! } });
+    if (!existing) throw new AppError(404, 'Objectif non trouvé');
+    await prisma.goal.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (err) { next(err); }
 });
 
-router.post('/:id/contribute', validateParams(idParam), validateBody(z.object({ amount: z.number().positive(), note: z.string().optional() })), async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/:id/contribute', async (req: AuthRequest, res: Response, next) => {
   try {
+    const { amount } = z.object({ amount: z.number().positive() }).parse(req.body);
     const goal = await prisma.goal.findFirst({ where: { id: req.params.id, userId: req.userId! } });
-    if (!goal) throw new AppError(404, 'Goal not found');
-    const [contrib, updated] = await prisma.$transaction([
-      prisma.goalContribution.create({ data: { goalId: goal.id, amount: req.body.amount, note: req.body.note } }),
-      prisma.goal.update({ where: { id: goal.id }, data: { currentAmount: { increment: req.body.amount } } }),
-    ]);
-    if (Number(goal.currentAmount) + req.body.amount >= Number(goal.targetAmount)) {
-      await prisma.goal.update({ where: { id: goal.id }, data: { status: 'COMPLETED' } });
-      await prisma.notification.create({ data: { userId: req.userId!, type: 'GOAL_REACHED', title: '🎯 Objectif atteint !', message: `Bravo ! Votre objectif "${goal.name}" est atteint.` } });
-    }
-    res.status(201).json({ contribution: contrib, goal: updated });
-  } catch (e) { next(e); }
+    if (!goal) throw new AppError(404, 'Objectif non trouvé');
+    const updated = await prisma.goal.update({ where: { id: req.params.id }, data: { currentAmount: { increment: amount } } });
+    res.json(withProgress(updated));
+  } catch (err) { next(err); }
 });
 
 export default router;

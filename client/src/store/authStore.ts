@@ -1,30 +1,29 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface User {
   id: string;
-  fullName: string;
-  currency: string;
   email: string;
+  name: string;
 }
 
 interface AuthState {
+  token: string | null;
   user: User | null;
-  accessToken: string | null;
-  setAuth: (user: User, accessToken: string) => void;
-  setAccessToken: (token: string) => void;
+  setAuth: (token: string, user: User) => void;
   clearAuth: () => void;
   isAuthenticated: () => boolean;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
-  accessToken: null,
-
-  setAuth: (user, accessToken) => set({ user, accessToken }),
-
-  setAccessToken: (token) => set({ accessToken: token }),
-
-  clearAuth: () => set({ user: null, accessToken: null }),
-
-  isAuthenticated: () => get().accessToken !== null && get().user !== null,
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      token: null,
+      user: null,
+      setAuth: (token, user) => set({ token, user }),
+      clearAuth: () => set({ token: null, user: null }),
+      isAuthenticated: () => get().token !== null && get().user !== null,
+    }),
+    { name: 'finella-auth' }
+  )
+);
