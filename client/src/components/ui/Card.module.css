@@ -1,0 +1,23 @@
+.card {
+  background: var(--color-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.pad-sm { padding: var(--space-4); }
+.pad-md { padding: var(--space-6); }
+.pad-lg { padding: var(--space-8); }
+
+.clickable {
+  cursor: pointer;
+}
+.clickable:hover {
+  border-color: var(--color-border-hover);
+}
+
+.glow-pink  { box-shadow: var(--shadow-pink);   border-color: rgba(255, 45, 120, 0.3); }
+.glow-violet{ box-shadow: var(--shadow-violet);  border-color: rgba(199, 36, 255, 0.3); }
+.glow-none  {}

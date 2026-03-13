@@ -1,0 +1,51 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    command: sh -c "npx prisma db push && npm run dev"
+    volumes:
+      - ./server/src:/app/src
+      - ./server/prisma:/app/prisma
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      HMAC_SECRET: ${HMAC_SECRET}
+      PLAID_CLIENT_ID: ${PLAID_CLIENT_ID}
+      PLAID_SECRET: ${PLAID_SECRET}
+      PLAID_ENV: ${PLAID_ENV:-sandbox}
+      ALLOWED_ORIGINS: http://localhost:5173
+      NODE_ENV: development
+      PORT: 3000
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./client/src:/app/src
+    environment:
+      VITE_API_URL: /api/v1
+      VITE_PROXY_TARGET: http://backend:3000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend

@@ -1,0 +1,60 @@
+.page { display: flex; flex-direction: column; gap: var(--space-8); }
+.header { display: flex; align-items: flex-start; justify-content: space-between; }
+.title { font-family: var(--font-display); font-size: var(--text-3xl); font-weight: 700; }
+.subtitle { color: var(--color-text-muted); font-size: var(--text-sm); margin-top: var(--space-1); }
+
+.tableWrapper { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.table th {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-muted);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  vertical-align: middle;
+}
+.row:hover td { background: rgba(255,255,255,0.02); }
+.row:last-child td { border-bottom: none; }
+
+.date { color: var(--color-text-muted); white-space: nowrap; font-family: var(--font-mono); font-size: var(--text-xs); }
+.label { font-weight: 500; display: flex; align-items: center; gap: var(--space-2); }
+.recurringBadge { font-size: 0.75rem; opacity: 0.6; }
+.account { color: var(--color-text-muted); font-size: var(--text-xs); }
+
+.amount { font-family: var(--font-mono); font-weight: 600; text-align: right; white-space: nowrap; }
+.positive { color: var(--color-success); }
+.negative { color: var(--color-text); }
+
+.categorizeBtn {
+  background: rgba(199,36,255,0.1); border: 1px dashed rgba(199,36,255,0.3);
+  color: var(--color-lavender); border-radius: var(--radius-full);
+  padding: 2px var(--space-2); font-size: var(--text-xs); cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.categorizeBtn:hover { background: rgba(199,36,255,0.2); }
+
+.loadMore { display: flex; justify-content: center; padding: var(--space-4); border-top: 1px solid var(--color-border); }
+
+.catGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+.catItem {
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
+  padding: var(--space-4); background: rgba(255,255,255,0.03);
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  color: var(--color-text); font-size: var(--text-xs); cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.catItem:hover { background: rgba(199,36,255,0.1); border-color: var(--color-neon-violet); }
+
+.importArea { display: flex; flex-direction: column; align-items: center; gap: var(--space-5); padding: var(--space-4); }
+.importIcon  { font-size: 3rem; }
+.importDesc  { color: var(--color-text-muted); font-size: var(--text-sm); text-align: center; line-height: 1.6; }
+.importDesc code { color: var(--color-lavender); font-family: var(--font-mono); }
+.fileInput { width: 100%; padding: var(--space-3); background: rgba(255,255,255,0.05); border: 1px dashed var(--color-border); border-radius: var(--radius-md); color: var(--color-text); cursor: pointer; }

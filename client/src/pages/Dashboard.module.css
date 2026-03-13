@@ -1,0 +1,50 @@
+.page { display: flex; flex-direction: column; gap: var(--space-8); }
+
+.pageHeader { }
+.title { font-family: var(--font-display); font-size: var(--text-3xl); font-weight: 700; }
+.subtitle { color: var(--color-text-muted); font-size: var(--text-sm); margin-top: var(--space-1); text-transform: capitalize; }
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
+}
+@media (max-width: 1280px) { .kpiGrid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px)  { .kpiGrid { grid-template-columns: 1fr; } }
+
+.kpiCard { position: relative; overflow: hidden; }
+.kpiLabel { font-size: var(--text-sm); color: var(--color-text-muted); margin-bottom: var(--space-3); }
+.kpiValue { font-size: var(--text-2xl); font-weight: 700; font-family: var(--font-mono); }
+.kpiIcon  { position: absolute; top: var(--space-4); right: var(--space-4); font-size: 1.5rem; opacity: 0.4; }
+
+.chartsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+}
+@media (max-width: 1024px) { .chartsRow { grid-template-columns: 1fr; } }
+
+.donutCard, .recentCard { min-height: 300px; }
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-5);
+  color: var(--color-text);
+}
+
+.txList { display: flex; flex-direction: column; gap: var(--space-3); }
+.txItem { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.txItem:last-child { border-bottom: none; }
+.txLeft { display: flex; align-items: center; gap: var(--space-3); }
+.txEmoji { font-size: 1.25rem; width: 32px; text-align: center; }
+.txLabel { font-size: var(--text-sm); font-weight: 500; }
+.txDate  { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; }
+.txAmount { font-size: var(--text-sm); font-weight: 600; font-family: var(--font-mono); }
+
+.accountsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-4); }
+.accountItem  { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); background: rgba(255,255,255,0.03); border-radius: var(--radius-lg); border: 1px solid var(--color-border); }
+.accountIcon  { font-size: 1.5rem; }
+.accountInfo  { flex: 1; min-width: 0; }
+.accountLabel { font-size: var(--text-sm); font-weight: 600; }
+.accountProvider { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; }
+.accountBalance { font-size: var(--text-base); font-weight: 700; font-family: var(--font-mono); color: var(--color-lavender); }

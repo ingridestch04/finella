@@ -1,0 +1,24 @@
+.page { display: flex; flex-direction: column; gap: var(--space-6); max-width: 720px; }
+.pageHeader { }
+.title { font-family: var(--font-display); font-size: var(--text-3xl); font-weight: 700; }
+.sectionTitle { font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-5); }
+
+.profileRow { display: flex; align-items: center; gap: var(--space-5); }
+.avatar { width: 56px; height: 56px; border-radius: 50%; background: var(--gradient-brand); display: flex; align-items: center; justify-content: center; font-size: var(--text-2xl); font-weight: 700; color: white; flex-shrink: 0; }
+.profileName  { font-size: var(--text-xl); font-weight: 600; }
+.profileEmail { font-size: var(--text-sm); color: var(--color-text-muted); margin-top: var(--space-1); }
+.profileCurrency { font-size: var(--text-sm); color: var(--color-lavender); margin-top: var(--space-1); }
+
+.toggleList { display: flex; flex-direction: column; gap: var(--space-4); }
+.toggleItem { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.toggleItem:last-child { border-bottom: none; }
+.toggleLabel { font-size: var(--text-sm); font-weight: 500; }
+.toggleDesc  { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; }
+
+.rgpdDesc { color: var(--color-text-muted); font-size: var(--text-sm); margin-bottom: var(--space-5); line-height: 1.6; }
+.rgpdActions { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+
+.about { display: flex; flex-direction: column; gap: var(--space-3); }
+.aboutItem { display: flex; gap: var(--space-4); font-size: var(--text-sm); }
+.aboutKey  { color: var(--color-text-muted); min-width: 100px; }
+.aboutVal  { color: var(--color-lavender); font-family: var(--font-mono); font-size: var(--text-xs); }

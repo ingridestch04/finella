@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum BankProvider {
+  BNP
+  SOCIETE_GENERALE
+  CREDIT_AGRICOLE
+  BOURSORAMA
+  REVOLUT
+  N26
+  MANUAL
+  PLAID
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  INVESTMENT
+  CREDIT
+}
+
+enum CategorizationSource {
+  MANUAL
+  RULE
+  AI
+  IMPORT
+}
+
+enum ImportSource {
+  CSV
+  XLSX
+  PLAID
+  MANUAL
+}
+
+enum BudgetPeriod {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum GoalType {
+  SAVINGS
+  DEBT_PAYOFF
+  INVESTMENT
+  EMERGENCY_FUND
+  PURCHASE
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  CANCELLED
+}
+
+enum NotificationType {
+  BUDGET_ALERT
+  GOAL_REACHED
+  SYNC_DONE
+  ANOMALY
+  REMINDER
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  PUSH
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+model User {
+  id                String    @id @default(cuid()) @map("_id")
+  emailHmac         String    @unique
+  emailEncrypted    String
+  passwordHash      String
+  fullName          String
+  currency          String    @default("EUR")
+  gdprConsentAt     DateTime?
+  notificationPrefs Json      @default("{\"budgetAlerts\":true,\"goalUpdates\":true,\"syncNotifications\":true,\"push\":false}")
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  accounts      BankAccount[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  goals         Goal[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  categories    Category[]
+
+  @@map("users")
+}
+
+model BankAccount {
+  id             String       @id @default(cuid()) @map("_id")
+  userId         String
+  provider       BankProvider
+  label          String
+  type           AccountType
+  ibanMasked     String?
+  currency       String       @default("EUR")
+  balance        Float        @default(0)
+  accessTokenEnc String?
+  isActive       Boolean      @default(true)
+  lastSyncedAt   DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  goals        Goal[]
+
+  @@map("bank_accounts")
+}
+
+model Category {
+  id       String  @id @default(cuid()) @map("_id")
+  userId   String?
+  name     String
+  emoji    String  @default("💰")
+  color    String  @default("#9b3dff")
+  isSystem Boolean @default(false)
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@map("categories")
+}
+
+model Transaction {
+  id                   String               @id @default(cuid()) @map("_id")
+  accountId            String
+  userId               String
+  externalId           String?
+  date                 DateTime
+  amount               Float
+  currency             String               @default("EUR")
+  label                String
+  cleanLabel           String?
+  categoryId           String?
+  categorizationSource CategorizationSource @default(MANUAL)
+  confidenceScore      Float?
+  importSource         ImportSource         @default(MANUAL)
+  importBatchId        String?
+  isRecurring          Boolean              @default(false)
+  metadata             Json                 @default("{}")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  account  BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category?   @relation(fields: [categoryId], references: [id])
+
+  @@unique([accountId, externalId])
+  @@map("transactions")
+}
+
+model Budget {
+  id             String       @id @default(cuid()) @map("_id")
+  userId         String
+  categoryId     String
+  limitAmount    Float
+  period         BudgetPeriod
+  alertThreshold Float        @default(0.8)
+  rollover       Boolean      @default(false)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, categoryId, period])
+  @@map("budgets")
+}
+
+model Goal {
+  id              String     @id @default(cuid()) @map("_id")
+  userId          String
+  name            String
+  type            GoalType
+  targetAmount    Float
+  currentAmount   Float      @default(0)
+  startDate       DateTime
+  endDate         DateTime?
+  linkedAccountId String?
+  status          GoalStatus @default(ACTIVE)
+  icon            String     @default("🎯")
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedAccount BankAccount?       @relation(fields: [linkedAccountId], references: [id])
+  contributions GoalContribution[]
+
+  @@map("goals")
+}
+
+model GoalContribution {
+  id     String   @id @default(cuid()) @map("_id")
+  goalId String
+  amount Float
+  note   String?
+  date   DateTime @default(now())
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@map("goal_contributions")
+}
+
+model Notification {
+  id          String              @id @default(cuid()) @map("_id")
+  userId      String
+  type        NotificationType
+  channel     NotificationChannel @default(IN_APP)
+  title       String
+  message     String
+  actionUrl   String?
+  status      NotificationStatus  @default(PENDING)
+  retryCount  Int                 @default(0)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  readAt      DateTime?
+  createdAt   DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid()) @map("_id")
+  userId     String?
+  action     String
+  entityType String
+  ipAddress  String?
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}

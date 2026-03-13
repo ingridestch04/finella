@@ -1,0 +1,35 @@
+.page { display: flex; flex-direction: column; gap: var(--space-8); }
+.header { display: flex; align-items: flex-start; justify-content: space-between; }
+.title { font-family: var(--font-display); font-size: var(--text-3xl); font-weight: 700; }
+.subtitle { color: var(--color-text-muted); font-size: var(--text-sm); margin-top: var(--space-1); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-5); }
+
+.accountCard { display: flex; flex-direction: column; gap: var(--space-4); }
+.accountTop  { display: flex; align-items: center; gap: var(--space-3); }
+.accountIcon { font-size: 2rem; }
+.accountMeta { }
+.accountLabel { font-weight: 600; font-size: var(--text-base); }
+.accountType  { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+.iban { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-muted); }
+.balance { font-size: var(--text-2xl); font-weight: 700; font-family: var(--font-mono); color: var(--color-lavender); }
+.accountFooter { display: flex; align-items: center; justify-content: space-between; }
+.syncDate { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+.empty { grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-16); color: var(--color-text-muted); text-align: center; }
+
+.form { display: flex; flex-direction: column; gap: var(--space-5); }
+.formRow { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.formGroup { display: flex; flex-direction: column; gap: var(--space-2); }
+.formGroup label { font-size: var(--text-sm); color: var(--color-text-muted); font-weight: 500; }
+.formGroup input, .formGroup select {
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: var(--text-base);
+  font-family: var(--font-body);
+}
+.formGroup input:focus, .formGroup select:focus { outline: none; border-color: var(--color-neon-violet); }
+.formActions { display: flex; gap: var(--space-3); justify-content: flex-end; }

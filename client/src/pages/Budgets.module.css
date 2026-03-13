@@ -1,0 +1,42 @@
+.page { display: flex; flex-direction: column; gap: var(--space-8); }
+.header { display: flex; align-items: flex-start; justify-content: space-between; }
+.title { font-family: var(--font-display); font-size: var(--text-3xl); font-weight: 700; }
+.subtitle { color: var(--color-text-muted); font-size: var(--text-sm); margin-top: var(--space-1); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-5); }
+
+.budgetCard { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.budgetTop { display: flex; align-items: center; justify-content: space-between; }
+.budgetCategory { display: flex; align-items: center; gap: var(--space-3); }
+.budgetName { font-weight: 600; font-size: var(--text-base); }
+.budgetPeriod { font-size: var(--text-xs); color: var(--color-text-muted); text-transform: capitalize; }
+
+.budgetAmounts { display: flex; align-items: baseline; gap: var(--space-1); }
+.spent { font-size: var(--text-xl); font-weight: 700; font-family: var(--font-mono); color: var(--color-text); }
+.separator { color: var(--color-text-muted); }
+.limit { font-size: var(--text-sm); color: var(--color-text-muted); font-family: var(--font-mono); }
+
+.budgetFooter { display: flex; align-items: center; justify-content: space-between; }
+.remaining { font-size: var(--text-xs); color: var(--color-text-muted); }
+.deleteBtn { background: none; border: none; opacity: 0.4; transition: opacity var(--transition-fast); }
+.deleteBtn:hover { opacity: 1; }
+
+.empty { grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-16); color: var(--color-text-muted); text-align: center; }
+
+.form { display: flex; flex-direction: column; gap: var(--space-5); }
+.formGroup { display: flex; flex-direction: column; gap: var(--space-2); }
+.formGroup label { font-size: var(--text-sm); color: var(--color-text-muted); font-weight: 500; }
+.formGroup input, .formGroup select {
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: var(--text-base);
+  font-family: var(--font-body);
+}
+.formGroup input:focus, .formGroup select:focus {
+  outline: none; border-color: var(--color-neon-violet);
+}
+.formActions { display: flex; gap: var(--space-3); justify-content: flex-end; }
