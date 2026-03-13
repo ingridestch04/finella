@@ -1,7 +1,7 @@
 import { hashEmail } from '../../src/services/encryption.service';
 
 // Set env vars before importing auth service
-process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
+process.env.DATABASE_URL = 'mongodb://localhost:27017/finella_test';
 process.env.REDIS_URL = 'redis://localhost:6379';
 process.env.JWT_SECRET = 'test-jwt-secret-at-least-32-characters-long';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-at-least-32-chars!!';

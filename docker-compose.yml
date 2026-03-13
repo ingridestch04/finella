@@ -13,7 +13,7 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile.dev
-    command: sh -c "npx prisma db push && npm run dev"
+    command: npm run dev
     volumes:
       - ./server/src:/app/src
       - ./server/prisma:/app/prisma

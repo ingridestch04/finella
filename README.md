@@ -1,6 +1,6 @@
 # finella — Application de Gestion Financière Personnelle
 
-> Application web full-stack de gestion des finances personnelles avec analyses prédictives par IA, connexion bancaire en temps réel (Plaid) et tableaux de bord interactifs.
+> Application web full-stack permettant de gérer ses finances personnelles : suivi des dépenses, budgets, objectifs d'épargne, connexion bancaire en temps réel et analyses prédictives par intelligence artificielle.
 
 ---
 
@@ -8,169 +8,188 @@
 
 | Membre | Rôle principal |
 |--------|----------------|
-| INGRID | Full-stack — Backend API, IA analytics, Intégration Plaid, Infrastructure Docker |
-| [Prénom Binôme] | Full-stack — Frontend React, UI/UX, Import CSV/Excel, Composants |
+| INGRID | Backend API, base de données MongoDB, intégration Plaid, IA analytics, Docker |
+| [Prénom Binôme] | Frontend React, UI/UX, composants, pages, import CSV/Excel |
 
 ---
 
-## Fonctionnalités implémentées
+## Présentation du projet
 
-### Authentification & Sécurité
-- Inscription / Connexion avec **JWT** (access token 15 min + refresh token 7 jours en cookie httpOnly)
-- Hashage des mots de passe avec **Argon2id** (recommandation OWASP, résistant GPU)
-- HMAC sur les emails (recherche sans exposer l'email en clair en base)
-- Chiffrement **AES-256-GCM** des tokens bancaires sensibles
-- Blacklist de tokens via Redis (logout + rotation)
-- Rate limiting par endpoint, headers sécurisés (Helmet), CORS strict
-- Soft-delete des comptes utilisateurs (RGPD Art. 17)
+**finella** est une application de finance personnelle que nous avons développée de A à Z dans le cadre de notre projet scolaire. Elle permet à un utilisateur de :
+
+- Se connecter de façon sécurisée (JWT, Argon2id)
+- Ajouter et gérer plusieurs comptes bancaires
+- Connecter son vrai compte bancaire (Revolut, BNP, etc.) via l'API Plaid
+- Importer ses relevés bancaires au format CSV ou Excel
+- Catégoriser ses transactions
+- Créer des budgets par catégorie et suivre les dépassements
+- Définir des objectifs d'épargne et contribuer régulièrement
+- Visualiser ses données sous forme de graphiques interactifs
+- Recevoir des analyses prédictives générées par un modèle IA maison
+
+---
+
+## Fonctionnalités détaillées
+
+### Authentification
+- Inscription et connexion sécurisées
+- Mot de passe haché avec **Argon2id** (algorithme recommandé par OWASP)
+- Tokens JWT : access token (15 min) + refresh token (7 jours) en cookie HTTP-only
+- Déconnexion avec invalidation du token (liste noire Redis)
+- Protection contre les attaques par force brute (rate limiting)
 
 ### Comptes bancaires
-- Ajout manuel de comptes (Chèques, Épargne, Investissement, Crédit)
-- **Connexion bancaire en temps réel via l'API Plaid** (Revolut, BNP, Société Générale, N26…)
-- Synchronisation automatique des transactions Plaid sur 90 jours
-- Solde total agrégé multi-comptes
+- Ajout manuel de comptes (Compte courant, Épargne, Investissement, Crédit)
+- **Connexion en temps réel via Plaid** : l'utilisateur clique, une popup s'ouvre, il se connecte à sa banque (Revolut, BNP, Société Générale, N26…), et les transactions sont importées automatiquement
+- Synchronisation manuelle à la demande
+- Solde total de tous les comptes agrégé
 
 ### Transactions
-- Liste paginée avec filtres (catégorie, compte, période, montant min/max)
-- **Import de fichiers CSV** (virgule, point-virgule, colonnes FR ou EN)
-- **Import de fichiers Excel (.xlsx / .xls)** via SheetJS
-- Déduplication automatique à l'import
+- Liste paginée avec filtres avancés (par catégorie, compte, période, montant)
+- **Import CSV** : compatible avec les exports des banques françaises
+- **Import Excel (.xlsx / .xls)** : colonnes reconnues en français et en anglais
+- Déduplication automatique à l'import (évite les doublons)
 - Catégorisation manuelle des transactions
-- Statistiques par période (revenus, dépenses, solde net, répartition par catégorie)
 
 ### Budgets
-- Création de budgets par catégorie avec limite mensuelle
-- Calcul en temps réel du pourcentage consommé
-- Alertes de dépassement (seuil configurable)
-- Statuts visuels : OK / Attention / Dépassé
+- Création d'un budget mensuel par catégorie avec un montant limite
+- Calcul automatique du pourcentage dépensé en temps réel
+- Alerte visuelle quand le seuil est dépassé (statuts : OK / Attention / Dépassé)
 
 ### Objectifs financiers
-- Objectifs typés : épargne, remboursement de dette, achat, retraite
-- Contributions manuelles avec historique
-- Calcul automatique des jours restants et du montant manquant
+- Création d'objectifs typés : épargne, remboursement de dette, achat, fonds d'urgence
+- Suivi de la progression avec contributions manuelles
+- Affichage du montant restant et des jours avant la date limite
 
-### Analyses Prédictives par IA
-- **Prévision des dépenses** : régression linéaire sur 3 mois par catégorie, calcul du R²
-- **Évaluation des risques budgétaires** : burn rate quotidien → projection fin de mois, score de risque 0–100
-- **Détection d'anomalies** : Z-score par catégorie (seuil z > 2), sévérité moderate / high / extreme
-- **Prévision de trésorerie** : projection du solde sur 30 jours avec intervalle de confiance croissant
-- **Insights textuels intelligents** : alertes et conseils générés automatiquement
+### Analyses prédictives (IA)
+Notre modèle IA est implémenté en TypeScript pur, sans bibliothèque externe. Il comprend :
+
+| Algorithme | Ce qu'il fait |
+|-----------|---------------|
+| **Régression linéaire** | Prédit les dépenses du mois prochain par catégorie, à partir de 3 mois d'historique |
+| **Burn rate** | Calcule le taux de consommation quotidien et projette le total fin de mois pour alerter les dépassements de budget |
+| **Z-score (anomalie)** | Détecte les transactions inhabituellement élevées par rapport à la moyenne de la catégorie |
+| **Projection de trésorerie** | Prédit l'évolution du solde sur 30 jours avec un intervalle de confiance |
+| **Insights textuels** | Génère automatiquement des conseils et alertes en langage naturel |
 
 ### Interface utilisateur
-- Design sombre (dark theme) avec accents néon Rose & Violet
-- Sidebar rétractable, entièrement **responsive** (mobile / tablette / desktop)
-- Graphiques interactifs (Recharts) : donut, barres, courbes d'aire avec gradient
-- Système de notifications in-app avec compteur non-lus
-- Toasts de feedback (succès / erreur)
-- Skeleton loaders pendant les chargements
+- Design sombre avec accents néon (rose & violet)
+- Entièrement **responsive** : fonctionne sur mobile, tablette et ordinateur
+- Graphiques interactifs (camembert, barres, courbes d'aire)
+- Notifications in-app avec compteur
+- Messages de retour (toasts) pour chaque action
 
 ---
 
-## Stack technique
+## Technologies utilisées
 
-### Backend
-| Technologie | Usage |
-|-------------|-------|
-| Node.js 20 + TypeScript | Runtime & typage strict |
+### Backend (dossier `server/`)
+| Technologie | Rôle |
+|-------------|------|
+| Node.js 20 + TypeScript | Serveur et logique métier |
 | Express.js | Framework HTTP |
-| Prisma ORM | Accès base de données type-safe |
-| MongoDB 7 (Replica Set) | Base de données principale |
-| Redis 7 | Cache & blacklist JWT |
-| Argon2id | Hashage mots de passe |
-| Zod | Validation des entrées |
+| Prisma ORM | Accès à la base de données |
+| **MongoDB Atlas** | Base de données cloud |
+| Redis | Cache et blacklist des tokens JWT |
+| Argon2id | Hachage des mots de passe |
+| AES-256-GCM | Chiffrement des tokens bancaires |
+| Zod | Validation des données entrantes |
 | Plaid API | Connexion bancaire temps réel |
-| SheetJS (xlsx) | Parsing fichiers Excel |
-| PapaParse | Parsing fichiers CSV |
+| SheetJS | Lecture des fichiers Excel |
+| PapaParse | Lecture des fichiers CSV |
+| dotenv | Gestion des variables d'environnement |
 
-### Frontend
-| Technologie | Usage |
-|-------------|-------|
+### Frontend (dossier `client/`)
+| Technologie | Rôle |
+|-------------|------|
 | React 18 + TypeScript | Interface utilisateur |
-| Vite | Build tool & dev server HMR |
-| React Router v6 | Navigation SPA |
-| TanStack Query v5 | Cache & fetching API |
-| Zustand | État global (auth, UI) |
-| React Hook Form | Formulaires performants |
-| Recharts | Graphiques SVG responsives |
-| date-fns | Manipulation de dates (locale FR) |
-| CSS Modules | Styles scopés |
-| react-plaid-link | Widget Plaid Link officiel |
+| Vite | Outil de build et serveur de développement |
+| React Router v6 | Navigation entre les pages |
+| TanStack Query v5 | Gestion du cache et des requêtes API |
+| Zustand | État global (authentification, UI) |
+| React Hook Form | Gestion des formulaires |
+| Recharts | Graphiques SVG interactifs |
+| date-fns | Manipulation des dates (locale française) |
+| CSS Modules | Styles isolés par composant |
+| react-plaid-link | Widget officiel Plaid |
 
 ### Infrastructure
-| Technologie | Usage |
-|-------------|-------|
-| Docker & Docker Compose | Conteneurisation complète (1 commande) |
-| MongoDB Replica Set rs0 | Requis pour transactions Prisma |
+| Technologie | Rôle |
+|-------------|------|
+| Docker & Docker Compose | Lancement de l'application en 1 commande |
+| MongoDB Atlas | Base de données hébergée dans le cloud |
 
 ---
 
 ## Prérequis
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installé et **démarré**
-- Ports **5173**, **3000**, **27017**, **6379** libres sur la machine
+- Ports **5173**, **3000**, **6379** libres sur la machine
 
 ---
 
 ## Lancer le projet
 
-### 1. Cloner le dépôt
+### Étape 1 — Cloner le dépôt
 
 ```bash
-git clone <url-du-repo>
-cd my-app
+git clone https://github.com/ingridestch04/finella.git
+cd finella
 ```
 
-### 2. Configurer les variables d'environnement
+### Étape 2 — Créer le fichier de configuration
 
-Le fichier `.env` à la racine est déjà configuré avec des valeurs par défaut fonctionnelles.
-
-Pour activer la connexion bancaire Plaid (optionnel — nécessite un compte sur [dashboard.plaid.com](https://dashboard.plaid.com)), modifier dans `.env` :
-
-```env
-PLAID_CLIENT_ID=votre_client_id_sandbox
-PLAID_SECRET=votre_secret_sandbox
-PLAID_ENV=sandbox
-```
-
-### 3. Démarrer avec Docker
+Copier le fichier d'exemple :
 
 ```bash
-docker compose up --build
+cp .env.example .env
 ```
 
-> Le premier démarrage prend environ 2 minutes (build des images + initialisation du Replica Set MongoDB).
+Puis ouvrir `.env` et remplir les valeurs (voir section Variables d'environnement ci-dessous).
 
-### 4. Accéder à l'application
+### Étape 3 — Démarrer l'application
 
-| Service | URL |
-|---------|-----|
+```bash
+docker compose up --build -d
+```
+
+> Le premier démarrage télécharge les images Docker et installe les dépendances. Cela prend environ 2 à 3 minutes.
+
+### Étape 4 — Ouvrir dans le navigateur
+
+| Service | Adresse |
+|---------|---------|
 | Application web | http://localhost:5173 |
-| API REST | http://localhost:3000/api/v1 |
-| Health check | http://localhost:3000/health |
+| API backend | http://localhost:3000/api/v1 |
+| Vérification API | http://localhost:3000/health |
 
-### 5. Créer un compte
+### Étape 5 — Créer un compte
 
-Ouvrir **http://localhost:5173**, cliquer sur **"Créer un compte"** et s'inscrire.
+Sur la page d'accueil, cliquer sur **"Créer un compte"** et s'inscrire.
 
 ---
 
-## Commandes utiles
+## Variables d'environnement (fichier `.env`)
 
-```bash
-# Démarrer tous les services
-docker compose up --build
+```env
+# Base de données MongoDB Atlas
+DATABASE_URL=mongodb+srv://<utilisateur>:<mot_de_passe>@<cluster>.mongodb.net/finella?appName=<nom>
 
-# Arrêter
-docker compose down
+# Sécurité — clés JWT (minimum 32 caractères)
+JWT_SECRET=votre_cle_secrete_jwt
+JWT_REFRESH_SECRET=votre_cle_secrete_refresh
 
-# Voir les logs du backend en temps réel
-docker compose logs -f backend
+# Chiffrement AES-256 (32 caractères minimum)
+ENCRYPTION_KEY=votre_cle_chiffrement
 
-# Redémarrer le backend (après modification de code)
-docker compose restart backend
+# HMAC pour les emails (16 caractères minimum)
+HMAC_SECRET=votre_cle_hmac
 
-# Réinitialiser complètement la base de données
-docker compose down -v && docker compose up --build
+# Plaid — connexion bancaire (optionnel)
+# Créer un compte sur https://dashboard.plaid.com
+PLAID_CLIENT_ID=votre_client_id_plaid
+PLAID_SECRET=votre_secret_sandbox
+PLAID_ENV=sandbox
 ```
 
 ---
@@ -178,141 +197,164 @@ docker compose down -v && docker compose up --build
 ## Structure du projet
 
 ```
-my-app/
-├── client/                       # Frontend React
+finella/
+├── client/                        # Application React (Frontend)
 │   ├── src/
-│   │   ├── components/ui/        # Design system (Button, Card, Modal, Sidebar…)
-│   │   ├── pages/
-│   │   │   ├── Dashboard.tsx     # KPIs + graphiques + transactions récentes
-│   │   │   ├── Transactions.tsx  # Liste paginée + import CSV/Excel
-│   │   │   ├── Budgets.tsx       # Budgets avec jauges
-│   │   │   ├── Goals.tsx         # Objectifs financiers
-│   │   │   ├── Accounts.tsx      # Comptes + connexion Plaid
-│   │   │   ├── Analytics.tsx     # IA Prédictive
-│   │   │   └── Settings.tsx      # Paramètres & RGPD
+│   │   ├── components/ui/         # Composants réutilisables
+│   │   │   ├── Button, Card, Modal, Input
+│   │   │   ├── Sidebar, Layout, Toast
+│   │   │   └── PlaidConnect       # Bouton connexion bancaire
+│   │   ├── pages/                 # Pages de l'application
+│   │   │   ├── Dashboard.tsx      # Tableau de bord principal
+│   │   │   ├── Transactions.tsx   # Liste + import CSV/Excel
+│   │   │   ├── Budgets.tsx        # Gestion des budgets
+│   │   │   ├── Goals.tsx          # Objectifs financiers
+│   │   │   ├── Accounts.tsx       # Comptes bancaires + Plaid
+│   │   │   ├── Analytics.tsx      # IA Prédictive
+│   │   │   └── Settings.tsx       # Paramètres utilisateur
 │   │   ├── services/api/
-│   │   │   ├── client.ts         # Axios + intercepteur refresh JWT
-│   │   │   └── hooks.ts          # Tous les hooks React Query
+│   │   │   ├── client.ts          # Configuration Axios + refresh JWT
+│   │   │   └── hooks.ts           # Tous les hooks React Query
 │   │   └── store/
-│   │       ├── authStore.ts      # Zustand — état d'authentification
-│   │       └── uiStore.ts        # Zustand — sidebar, toasts
+│   │       ├── authStore.ts       # État d'authentification
+│   │       └── uiStore.ts         # Sidebar, toasts, notifications
+│   ├── vite.config.ts             # Configuration Vite + proxy API
 │   └── Dockerfile.dev
 │
-├── server/                       # Backend Express
+├── server/                        # API Express (Backend)
 │   ├── src/
-│   │   ├── config/               # env.ts, database.ts, redis.ts, plaid.ts
-│   │   ├── middleware/           # auth.ts, validate.ts, rateLimiter.ts, errorHandler.ts
+│   │   ├── config/
+│   │   │   ├── env.ts             # Validation des variables d'environnement
+│   │   │   ├── database.ts        # Connexion Prisma/MongoDB
+│   │   │   ├── redis.ts           # Connexion Redis
+│   │   │   ├── jwt.ts             # Gestion des tokens
+│   │   │   └── plaid.ts           # Client Plaid API
+│   │   ├── middleware/
+│   │   │   ├── auth.ts            # Vérification JWT
+│   │   │   ├── validate.ts        # Validation Zod
+│   │   │   ├── rateLimiter.ts     # Limitation des requêtes
+│   │   │   └── errorHandler.ts    # Gestion centralisée des erreurs
 │   │   ├── routes/
-│   │   │   ├── auth.ts
-│   │   │   ├── accounts.ts       # + routes Plaid intégrées
-│   │   │   ├── transactions.ts   # + import CSV/Excel
-│   │   │   ├── budgets.ts
-│   │   │   ├── goals.ts
-│   │   │   ├── categories.ts
-│   │   │   ├── notifications.ts
-│   │   │   ├── analytics.ts      # 5 endpoints IA
-│   │   │   └── admin.ts
+│   │   │   ├── auth.ts            # /register, /login, /logout, /refresh
+│   │   │   ├── accounts.ts        # Comptes bancaires + routes Plaid
+│   │   │   ├── transactions.ts    # Transactions + import fichiers
+│   │   │   ├── budgets.ts         # CRUD budgets
+│   │   │   ├── goals.ts           # CRUD objectifs + contributions
+│   │   │   ├── categories.ts      # Catégories
+│   │   │   ├── notifications.ts   # Notifications in-app
+│   │   │   └── analytics.ts       # 5 endpoints IA prédictive
 │   │   └── services/
-│   │       ├── auth.service.ts   # Login, register, refresh, logout
-│   │       ├── plaid.service.ts  # Link token, exchange, sync transactions
-│   │       └── analytics.service.ts  # Régression, Z-score, burn rate, cash flow
-│   ├── prisma/schema.prisma
+│   │       ├── auth.service.ts    # Logique login/register/logout
+│   │       ├── encryption.service.ts  # AES-256-GCM + HMAC
+│   │       ├── plaid.service.ts   # Connexion + sync transactions Plaid
+│   │       ├── categorization.service.ts  # Catégorisation par règles
+│   │       └── analytics.service.ts   # Modèle IA (régression, Z-score…)
+│   ├── prisma/schema.prisma       # Schéma de la base de données MongoDB
 │   └── Dockerfile.dev
 │
-├── docker-compose.yml
-├── .env
+├── docker-compose.yml             # Orchestration des services
+├── .env                           # Variables d'environnement (non committé)
+├── .env.example                   # Modèle de configuration
 └── README.md
 ```
 
 ---
 
-## API — Principaux endpoints
+## Architecture technique
 
-### Authentification
 ```
-POST /api/v1/auth/register          Inscription
-POST /api/v1/auth/login             Connexion
-POST /api/v1/auth/refresh           Renouvellement du token
-POST /api/v1/auth/logout            Déconnexion
-GET  /api/v1/auth/me                Profil utilisateur connecté
-```
-
-### Comptes
-```
-GET    /api/v1/accounts                     Liste des comptes actifs
-POST   /api/v1/accounts                     Ajouter un compte manuel
-PATCH  /api/v1/accounts/:id                 Modifier (comptes manuels uniquement)
-DELETE /api/v1/accounts/:id                 Désactiver
-POST   /api/v1/accounts/:id/sync            Synchroniser
-POST   /api/v1/accounts/plaid/link-token    Créer un token Plaid Link
-POST   /api/v1/accounts/plaid/exchange      Échanger le token public Plaid
-```
-
-### Transactions
-```
-GET    /api/v1/transactions                 Liste paginée (cursor-based)
-GET    /api/v1/transactions/stats           Statistiques par période
-PATCH  /api/v1/transactions/:id/category    Catégoriser une transaction
-POST   /api/v1/transactions/import-csv      Import CSV ou Excel
-```
-
-### Analyses prédictives (IA)
-```
-GET /api/v1/analytics/forecasts     Prévisions de dépenses par catégorie
-GET /api/v1/analytics/risks         Risques de dépassement de budget (0–100)
-GET /api/v1/analytics/anomalies     Transactions inhabituelles (Z-score > 2)
-GET /api/v1/analytics/cashflow      Projection trésorerie 30 jours + IC
-GET /api/v1/analytics/insights      Insights textuels générés automatiquement
+Navigateur (http://localhost:5173)
+        │
+        ▼
+┌─────────────────────┐
+│  Vite Dev Server    │  ← Sert le React
+│  (Frontend)         │  ← Proxy /api → Backend
+└─────────┬───────────┘
+          │ HTTP
+          ▼
+┌─────────────────────┐
+│  Express API        │  ← Authentification JWT
+│  (Backend :3000)    │  ← Validation Zod
+└──────┬──────┬───────┘
+       │      │
+       ▼      ▼
+┌──────────┐  ┌─────────┐
+│ MongoDB  │  │  Redis  │
+│  Atlas   │  │ (Cache) │
+│ (Cloud)  │  └─────────┘
+└──────────┘
+       │
+       ▼
+┌─────────────────────┐
+│  Plaid API          │  ← Banques réelles (Revolut, BNP…)
+│  (Externe)          │
+└─────────────────────┘
 ```
 
 ---
 
-## Modèle IA — Détail technique
+## Commandes utiles
 
-Le module `analytics.service.ts` implémente quatre algorithmes en TypeScript pur (sans dépendance ML externe) :
+```bash
+# Démarrer tous les services
+docker compose up --build -d
 
-| Algorithme | Description |
-|-----------|-------------|
-| **Régression linéaire** | Prédit les dépenses du mois prochain par catégorie à partir de 3 mois d'historique. Calcule la pente, l'ordonnée et le R². |
-| **Burn rate analysis** | `dépenses_actuelles / jours_écoulés × jours_du_mois` = projection fin de mois. Score de risque normalisé 0–100. |
-| **Z-score anomaly detection** | Pour chaque catégorie, calcule µ et σ. Signale les transactions où `z = (x − µ) / σ > 2` avec sévérité (moderate / high / extreme). |
-| **Cash flow forecasting** | Flux moyen journalier estimé sur 90 jours, avec facteur week-end (×0.7) / semaine (×1.1). Intervalle de confiance : `±σ × √t × 0.5`. |
+# Arrêter tous les services
+docker compose down
+
+# Voir les logs du backend
+docker compose logs -f backend
+
+# Voir les logs du frontend
+docker compose logs -f frontend
+
+# Redémarrer le backend (après une modification)
+docker compose restart backend
+
+# Tout réinitialiser (supprime les conteneurs)
+docker compose down && docker compose up --build -d
+```
 
 ---
 
-## Import de transactions
-
-| Format | Colonnes reconnues |
-|--------|--------------------|
-| CSV | `date`, `montant` ou `amount`, `libellé` ou `label` |
-| Excel .xlsx / .xls | Mêmes colonnes, première feuille utilisée |
-| Export Revolut CSV | Compatible nativement |
-
----
-
-## Sécurité
+## Sécurité mise en place
 
 | Mesure | Détail |
 |--------|--------|
-| Argon2id | memory: 64 MB, iterations: 3, parallelism: 4 |
-| JWT | Access 15 min + Refresh 7 j (cookie httpOnly Secure SameSite=Strict) |
-| Redis | Blacklist JWT à la déconnexion + rotation refresh |
-| Rate limiting | Login : 5/min, Register : 3/min, Global : 100/min |
-| Helmet.js | 9 en-têtes de sécurité HTTP |
-| AES-256-GCM | Chiffrement des access_token Plaid en base |
-| Prisma | Requêtes paramétrées → pas d'injection NoSQL |
-| Isolation userId | Chaque requête DB filtre sur `userId` de l'utilisateur connecté |
+| Argon2id | Hachage des mots de passe (recommandé par OWASP 2024) |
+| JWT HTTP-only | Tokens non accessibles depuis JavaScript (protection XSS) |
+| Redis blacklist | Invalidation des tokens à la déconnexion |
+| Rate limiting | Maximum 5 tentatives de login par minute par IP |
+| Helmet.js | 9 en-têtes de sécurité HTTP automatiques |
+| CORS strict | Seule l'origine du frontend est autorisée |
+| AES-256-GCM | Chiffrement des tokens Plaid stockés en base |
+| Prisma ORM | Requêtes paramétrées (protection injection NoSQL) |
+| Isolation userId | Chaque requête filtre strictement sur l'utilisateur connecté |
 
 ---
 
 ## Difficultés rencontrées
 
-- **Migration PostgreSQL → MongoDB** : Prisma impose des conventions différentes (`@map("_id")`, pas de `@db.Decimal`, champs absents ≠ null nécessitant le filtre `isSet: false`).
-- **MongoDB Replica Set obligatoire** : Prisma nécessite un replica set même en développement. Configuration automatique via un conteneur `mongo-init`.
-- **Modules natifs (Argon2) dans Docker** : binaires compilés sur Windows incompatibles Linux → `.dockerignore` excluant `node_modules`.
-- **Hot-reload sous Windows avec Docker** : les événements inotify ne se propagent pas → `docker compose restart backend` requis après certains changements.
-- **Flux Plaid** : l'échange du `public_token` doit être suivi immédiatement d'une sync pour peupler les transactions.
+1. **Migration PostgreSQL → MongoDB** : Prisma impose des conventions différentes pour MongoDB (`@map("_id")` obligatoire sur les IDs, `Float` à la place de `Decimal`, champs absents ≠ `null` nécessitant le filtre `{ isSet: false }`).
+
+2. **MongoDB Replica Set** : Prisma nécessite un Replica Set même en développement local. Nous avons configuré un initialisation automatique via un conteneur `mongo-init`.
+
+3. **CORS avec Docker** : En développement, les requêtes du navigateur vers le backend provoquaient des erreurs CORS. Solution : utiliser le proxy Vite pour que toutes les requêtes passent par le port 5173.
+
+4. **Modules natifs (Argon2) dans Docker** : Les binaires compilés sur Windows sont incompatibles avec Linux. Solution : ajouter un `.dockerignore` pour exclure `node_modules` et recompiler dans le conteneur.
+
+5. **Accès réseau MongoDB Atlas** : La base de données cloud refuse les connexions dont l'IP n'est pas whitelistée. Solution : autoriser `0.0.0.0/0` dans Network Access sur atlas.mongodb.com.
 
 ---
 
-*Projet scolaire — 2024/2025*
+## Fonctionnalités à ajouter si plus de temps
+
+- Export PDF des relevés et rapports
+- Notifications push (mobile)
+- Partage de budget entre membres d'un foyer
+- Modèle IA plus avancé avec machine learning (TensorFlow.js)
+- Application mobile React Native
+
+---
+
+*Projet scolaire — Promotion 2024/2025*

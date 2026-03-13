@@ -23,14 +23,6 @@ jobs:
     name: Backend Tests
     runs-on: ubuntu-latest
     services:
-      postgres:
-        image: postgres:15-alpine
-        env: { POSTGRES_DB: finella_test, POSTGRES_USER: finella, POSTGRES_PASSWORD: test }
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
       redis:
         image: redis:7-alpine
         options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
@@ -40,18 +32,10 @@ jobs:
         with: { node-version: '20', cache: 'npm', cache-dependency-path: 'server/package-lock.json' }
       - run: npm ci
         working-directory: server
-      - run: npx prisma generate
-        working-directory: server
-        env:
-          DATABASE_URL: postgresql://finella:test@localhost:5432/finella_test
-      - run: npx prisma migrate deploy
-        working-directory: server
-        env:
-          DATABASE_URL: postgresql://finella:test@localhost:5432/finella_test
       - run: npm test
         working-directory: server
         env:
-          DATABASE_URL: postgresql://finella:test@localhost:5432/finella_test
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-jwt-secret-at-least-32-characters
           JWT_REFRESH_SECRET: test-refresh-secret-at-least-32-chars
@@ -71,4 +55,4 @@ jobs:
       - run: npm run build
         working-directory: client
         env:
-          VITE_API_URL: http://localhost:3000/api/v1
+          VITE_API_URL: /api/v1
